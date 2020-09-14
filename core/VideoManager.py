@@ -1,6 +1,6 @@
 import cv2 as cv
 import time
-from . import Point, Rectangle
+from . import Point, Rectangle, Utils
 
 class VideoManager:
     imgMargin = 60
@@ -14,17 +14,20 @@ class VideoManager:
     yTopPos = None
     yBottomPos = None
     videoSource = None
+    videoTarget = None
+    doFlipFrame = True
+    videoWriter = None
 
-    def __init__(self, videoSource, windowName, frameWidth, frameHeight, netModel, scoreThreshold):
+    def __init__(self, windowName, videoSource, videoTarget, frameWidth, frameHeight, netModel, scoreThreshold):
         self.netModel = netModel
         self.windowName = windowName
         self.frameWidth = frameWidth
         self.frameHeight = frameHeight
         self.videoSource = videoSource
+        self.videoTarget = videoTarget
         self.scoreThreshold = scoreThreshold
         cv.namedWindow(self.windowName, cv.WINDOW_NORMAL)
-        self.cvNet = cv.dnn.readNetFromTensorflow(self.netModel['modelPath'], self.netModel['configPath'])
-        self.create_capture()
+        self.initVideoIO()
 
     def getImage(self):
         return self.img
@@ -67,23 +70,47 @@ class VideoManager:
 
     def shutdown(self):
         cv.destroyAllWindows()
+        if not self.videoWriter is None:
+            self.videoWriter.release()
 
-    def create_capture(self):
-        self.cap = cv.VideoCapture(cv.CAP_DSHOW + self.videoSource)
+    def decode_fourcc(self, v):
+        v = int(v)
+        return "".join([chr((v >> 8 * i) & 0xFF) for i in range(4)])
+
+    def initVideoIO(self):
+        # common logic
+        self.cvNet = cv.dnn.readNetFromTensorflow(self.netModel['modelPath'], self.netModel['configPath'])
+        self.cap = cv.VideoCapture(self.videoSource)
+        # self.cap = cv.VideoCapture(cv.CAP_DSHOW + self.videoSource)
         if self.cap is None or not self.cap.isOpened():
             raise RuntimeError('Warning: unable to open video source: ', self.videoSource)
-        self.cap.set(cv.CAP_PROP_FRAME_WIDTH, self.frameWidth) # default: 640
-        self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, self.frameHeight) # default: 480
         ret, _ = self.cap.read()
         if not ret:
             raise RuntimeError('Error: could not read video frame. Try changing resolution.')
+        # self.img = img
+
+        # real-time or video file detection
+        isVideoSourceInt = Utils.isInteger(self.videoSource)
+
+        if isVideoSourceInt: # real-time detection
+            self.cap.set(cv.CAP_PROP_FRAME_WIDTH, self.frameWidth)
+            self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, self.frameHeight)
+        else: # video file detection
+            ex = int(self.cap.get(cv.CAP_PROP_FOURCC))
+            fs = int(self.cap.get(cv.CAP_PROP_FPS))
+            sz = (int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH)), int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT)))
+            self.videoWriter = cv.VideoWriter(self.videoTarget, ex, fs, sz, True)
+            if self.videoWriter is None or not self.videoWriter.isOpened():
+                raise RuntimeError('Error: unable to open video target path')
 
     def readNewFrame(self):
         _, img = self.cap.read()
-        self.img = cv.flip(img, 1)
+        self.img = cv.flip(img, 1) if self.doFlipFrame else img
+
+    def writeFrame(self):
+        self.videoWriter.write(self.img)
 
     def runDetection(self):
-        self.readNewFrame()
         self.cvNet.setInput(cv.dnn.blobFromImage(self.img, 1.0/127.5, (300, 300), (127.5, 127.5, 127.5), swapRB=True, crop=False))
         self.detections = self.cvNet.forward()
 
