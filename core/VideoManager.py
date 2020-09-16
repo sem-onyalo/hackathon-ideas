@@ -29,6 +29,9 @@ class VideoManager:
         cv.namedWindow(self.windowName, cv.WINDOW_NORMAL)
         self.initVideoIO()
 
+    def isLeftButtonClick(self, event):
+        return event == cv.EVENT_LBUTTONDOWN
+
     def getImage(self):
         return self.img
 
@@ -47,6 +50,9 @@ class VideoManager:
     def getTextSize(self, text, font, scale, thickness):
         return cv.getTextSize(text, font, scale, thickness)[0]
 
+    def setMouseCallback(self, callbackFunction):
+        cv.setMouseCallback(self.windowName, callbackFunction)
+
     def showImage(self):
         cv.imshow(self.windowName, self.img)
 
@@ -58,15 +64,18 @@ class VideoManager:
             thickness = cv.FILLED
         cv.rectangle(self.img, pt1, pt2, color, thickness, cv.LINE_AA)
 
+    def addCircle(self, pt1, pt2, color, thickness=5):
+        cv.circle(self.img, (pt1, pt2), thickness, color, -1)
+
     def addLine(self, pt1, pt2, color, thickness):
         cv.line(self.img, pt1, pt2, color, thickness)
 
-    def addLabel(self, label, xLeft, yTop):
-        labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+    def addLabel(self, label, xLeft, yTop, size=0.5):
+        labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, size, 1)
         yTopText = max(yTop, labelSize[1])
         cv.rectangle(self.img, (xLeft, yTopText - labelSize[1]), (xLeft + labelSize[0], yTopText + baseLine),
             (255, 255, 255), cv.FILLED)
-        cv.putText(self.img, label, (xLeft, yTopText), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+        cv.putText(self.img, label, (xLeft, yTopText), cv.FONT_HERSHEY_SIMPLEX, size, (0, 0, 0))
 
     def shutdown(self):
         cv.destroyAllWindows()
@@ -134,3 +143,49 @@ class VideoManager:
                     objectDetectedHandler(cols, rows, self.xLeftPos, self.yTopPos, self.xRightPos, self.yBottomPos, self.netModel['classNames'][class_id])
                 rectangles.append(Rectangle.Rectangle(Point.Point(self.xLeftPos, self.yTopPos), Point.Point(self.xRightPos, self.yBottomPos)))
         return rectangles
+
+    def findBestDetection(self, className, findBestDetectionHandler=None):
+        currentScore = 0
+        bestDetection = None
+        rows = self.img.shape[0]
+        cols = self.img.shape[1]
+        for detection in self.detections[0,0,:,:]:
+            class_id = int(detection[1])
+            score = float(detection[2])
+            if self.netModel['classNames'][class_id] == className and score > self.scoreThreshold:
+                xLeftPt = int(detection[3] * cols)
+                yTopPt = int(detection[4] * rows)
+                xRightPt = int(detection[5] * cols)
+                yBottomPt = int(detection[6] * rows)
+                currentDetection = Rectangle.Rectangle(Point.Point(xLeftPt, yTopPt), Point.Point(xRightPt, yBottomPt))
+                if (bestDetection == None or (bestDetection != None and currentScore < score)):
+                    currentScore = score
+                    bestDetection = currentDetection
+
+        if findBestDetectionHandler != None:
+            findBestDetectionHandler(cols, rows, bestDetection, className, currentScore)
+
+        return bestDetection
+
+    def findClosestDetection(self, className, objectDetectedHandler=None):
+        currentScore = 0
+        closestDetection = None
+        rows = self.img.shape[0]
+        cols = self.img.shape[1]
+        for detection in self.detections[0,0,:,:]:
+            class_id = int(detection[1])
+            score = float(detection[2])
+            if self.netModel['classNames'][class_id] == className and score > self.scoreThreshold:
+                xLeftPt = int(detection[3] * cols)
+                yTopPt = int(detection[4] * rows)
+                xRightPt = int(detection[5] * cols)
+                yBottomPt = int(detection[6] * rows)
+                currentDetection = Rectangle.Rectangle(Point.Point(xLeftPt, yTopPt), Point.Point(xRightPt, yBottomPt))
+                if (closestDetection == None or (closestDetection != None and currentDetection.getArea() > closestDetection.getArea())):
+                    currentScore = score
+                    closestDetection = currentDetection
+
+        if closestDetection != None:
+            if objectDetectedHandler != None:
+                objectDetectedHandler(cols, rows, closestDetection.pt1.x, closestDetection.pt1.y, closestDetection.pt2.x, closestDetection.pt2.y, className, currentScore)
+            return closestDetection
