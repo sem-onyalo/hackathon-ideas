@@ -96,7 +96,6 @@ class VideoManager:
         ret, _ = self.cap.read()
         if not ret:
             raise RuntimeError('Error: could not read video frame. Try changing resolution.')
-        # self.img = img
 
         # real-time or video file detection
         isVideoSourceInt = Utils.isInteger(self.videoSource)
@@ -108,16 +107,18 @@ class VideoManager:
             ex = int(self.cap.get(cv.CAP_PROP_FOURCC))
             fs = int(self.cap.get(cv.CAP_PROP_FPS))
             sz = (int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH)), int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT)))
-            self.videoWriter = cv.VideoWriter(self.videoTarget, ex, fs, sz, True)
-            if self.videoWriter is None or not self.videoWriter.isOpened():
-                raise RuntimeError('Error: unable to open video target path')
+            if not self.videoTarget is None:
+                self.videoWriter = cv.VideoWriter(self.videoTarget, ex, fs, sz, True)
+                if self.videoWriter is None or not self.videoWriter.isOpened():
+                    raise RuntimeError('Error: unable to open video target path')
 
     def readNewFrame(self):
         _, img = self.cap.read()
         self.img = cv.flip(img, 1) if self.doFlipFrame else img
 
     def writeFrame(self):
-        self.videoWriter.write(self.img)
+        if not self.videoWriter is None:
+            self.videoWriter.write(self.img)
 
     def runDetection(self):
         self.cvNet.setInput(cv.dnn.blobFromImage(self.img, 1.0/127.5, (300, 300), (127.5, 127.5, 127.5), swapRB=True, crop=False))

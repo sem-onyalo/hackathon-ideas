@@ -9,7 +9,7 @@ if __name__ == '__main__':
         2 - Spot Brand Loyalty \
         3 - Identify Sports Allegiance")
     parser.add_argument("videoSourcePath", type=str, help="The path to the video being processed.")
-    parser.add_argument("videoTargetPath", type=str, help="The path to the output the processed video")
+    parser.add_argument("--out", type=str, help="The path to the output the processed video")
     parser.add_argument("--res", type=str, default="1280,720", help="The resolution of the video. Default is \"1280,720\"")
     parser.add_argument("--reps", type=int, default=5, help="The number of player reps per spot challenge game. Default is 5.")
     parser.add_argument("--score_threshold", type=float, default=0.3, help="Only detections with a probability of correctness above the specified threshold")
@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     if args.optionId == 1:
         model = ModelManager.ModelManager.models[0]
-        videoManager = VideoManager.VideoManager('Hackathon Ideas', args.videoSourcePath, args.videoTargetPath, res[0], res[1], model, args.score_threshold)
+        videoManager = VideoManager.VideoManager('Hackathon Ideas', args.videoSourcePath, args.out, res[0], res[1], model, args.score_threshold)
         app = WorkTracker.WorkTracker(videoManager)
     else:
         raise RuntimeError('Invalid option:', args.optionId)
