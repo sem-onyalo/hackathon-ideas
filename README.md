@@ -29,10 +29,27 @@ Keep track of the amount of time you are in your work position using object dete
 
 ![Print time spent working](trackworktime/samples/print-time-spent-working.png)
 
-### Spot Brand Loyalty
+### Identify Sports Allegiance
+
+TODO: put description here
 
 `python main.py 2`
 
-### Identify Sports Allegiance
+1. Annotate using CVAT
+
+![Annotate using CVAT example](identifyteamallegiance/samples/annotation.png)
+
+2. Download Pascal VOC 
+
+![Export as Pascal VOC](identifyteamallegiance/samples/export.png)
+
+3. Create the file [label_map.pbtxt](identifyteamallegiance/cv/dnn/data/training/data/label_map.pbtxt) with the following contents:
+
+    item {
+        id: 1
+        name: 'logo'
+    }
+
+### Spot Brand Loyalty
 
 `python main.py 3`

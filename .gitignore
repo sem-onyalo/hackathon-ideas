@@ -104,3 +104,6 @@ ENV/
 .vs
 .vscode
 .idea
+
+# CV model training
+cv/
