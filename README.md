@@ -10,6 +10,12 @@ TODO: Put link to demo video here
 
 Keep track of the amount of time you are in your work position using object detection.
 
+#### Dependencies
+
+1. [Python](https://www.python.org/downloads/)
+
+2. [OpevCV](https://opencv.org/releases/)
+
 #### Instructions
 
 1. Run the track work time app on your video: `python main.py 1 trackworktime/samples/in.mp4`.
