@@ -23,27 +23,31 @@ class TeamAllegiance:
     _appName = "teamAllegiance"
 
     isDebug = False
+    isTrain = False
     pascalVocSourceDirectory = ""
+    trainingDataDirectory = ""
     annotationsDirectory = ""
     imageSetDirectory = ""
     labelMapFilePath = ""
     workingDirectory = ""
     boundingBoxXmlIndex = -1
     trainAndTestSplitPct = 0
-    tfrecordTestFileName = "test.record"
-    tfrecordTrainFileName = "train.record"
+    tfrecordTestFilePath = ""
+    tfrecordTrainFilePath = ""
 
     def __init__(self, args):
         self.isDebug = True # TODO: get from args
-        self.workingDirectory = args.working_dir
+        self.isTrain = args.train
+        self.workingDirectory = args.sourcePath
         self.boundingBoxXmlIndex = args.bnbbox_xml_idx
         self.trainAndTestSplitPct = args.train_test_split
         self.pascalVocSourceDirectory = args.pascal_voc_dir
-        self.tfrecordTestFileName
-        self.tfrecordTrainFileName
         self.annotationsDirectory = os.path.join(self.pascalVocSourceDirectory, "Annotations")
         self.imageSetDirectory = os.path.join(self.pascalVocSourceDirectory, "JPEGImages")
-        self.labelMapFilePath = os.path.join(self.workingDirectory, "training/data/label_map.pbtxt")
+        self.trainingDataDirectory = os.path.join(self.workingDirectory, "training/data")
+        self.labelMapFilePath = os.path.join(self.trainingDataDirectory, "label_map.pbtxt")
+        self.tfrecordTestFilePath = os.path.join(self.trainingDataDirectory, f'test.{args.tfrecord_file_ext}')
+        self.tfrecordTrainFilePath = os.path.join(self.trainingDataDirectory, f'train.{args.tfrecord_file_ext}')
 
     def pascal_voc_to_csv(self, input_dir):
         annot_list = []
@@ -68,7 +72,7 @@ class TeamAllegiance:
         
         return csv_data
 
-    def split_into_train_and_test(self, labels):
+    def split_into_test_and_train(self, labels):
         # group all the labels by filename (image)
         labels_grouped = labels.groupby('filename')
         labels_grouped_list = [labels_grouped.get_group(x) for x in labels_grouped.groups]
@@ -89,7 +93,7 @@ class TeamAllegiance:
         #     train.to_csv(f'{self.workingDirectory}\labels-train.csv', index=None)
         #     test.to_csv(f'{self.workingDirectory}\labels-test.csv', index=None)
 
-        return (train, test)
+        return (test, train)
 
     def create_tf_example(self, label_group, label_map, image_set_path):
         with tf.gfile.GFile(os.path.join(image_set_path, '{}'.format(label_group.filename)), 'rb') as fid:
@@ -148,11 +152,12 @@ class TeamAllegiance:
             tf_example = self.create_tf_example(label_group, label_map, image_set_path)
             tfrecord_writer.write(tf_example.SerializeToString())
 
-    def createTrainingData(self, inputPath, outputPath):
-        csvLabels = self.pascal_voc_to_csv(inputPath)
-        trainAndTestLabels = self.split_into_train_and_test(csvLabels)
-        self.create_tfrecord_file(trainAndTestLabels[0], self.labelMapFilePath, self.imageSetDirectory, os.path.join(outputPath, self.tfrecordTrainFileName))
-        self.create_tfrecord_file(trainAndTestLabels[1], self.labelMapFilePath, self.imageSetDirectory, os.path.join(outputPath, self.tfrecordTestFileName))
+    def createTrainingData(self, inputDirectory, outputDirectory):
+        csvLabels = self.pascal_voc_to_csv(inputDirectory)
+        testAndTrainLabels = self.split_into_test_and_train(csvLabels)
+        self.create_tfrecord_file(testAndTrainLabels[0], self.labelMapFilePath, self.imageSetDirectory, self.tfrecordTestFilePath)
+        self.create_tfrecord_file(testAndTrainLabels[1], self.labelMapFilePath, self.imageSetDirectory, self.tfrecordTrainFilePath)
 
     def run(self):
-        self.createTrainingData(self.annotationsDirectory, self.workingDirectory)
+        if self.isTrain:
+            self.createTrainingData(self.annotationsDirectory, self.workingDirectory)

@@ -106,4 +106,5 @@ ENV/
 .idea
 
 # CV model training
-cv/
+**/cv/*
+!**/cv/dnn.zip 
