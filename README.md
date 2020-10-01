@@ -42,9 +42,61 @@ Keep track of the amount of time you are in your work position using object dete
 
 ### Identify Sports Team Allegiance
 
-Identify a person's sports team allegiances by detecting sports logos in their images.
+Identify a person's sports team allegiances by detecting sports logos in their video feed.
 
-1. Gather images with the sports logo you want to detect and annotate the logos using ![CVAT](https://github.com/opencv/cvat)
+#### Dependencies
+
+1. [Python](https://www.python.org/downloads/)
+
+2. [OpevCV](https://opencv.org/releases/)
+
+3. TensorFlow's object detection API dependencies:
+
+    ```
+    pip install tensorflow
+    pip install Cython
+    pip install pillow
+    pip install lxml
+    pip install matplotlib
+    ```
+
+4. Google's protobuf (TensorFlow git repository) release:
+
+    ```
+    cd c:\code
+    mkdir tensorflow
+    cd tensorflow
+    clone https://github.com/tensorflow/models.git
+    cd models/research/directory
+    
+    python setup.py build
+    python setup.py install
+
+    cd slim
+    pip install -e .
+    ```
+
+5. [philferriere's](https://github.com/philferriere) COCO API fork:
+
+    ```
+    cd c:\code
+    mkdir philferriere
+    cd philferriere
+    git clone https://github.com/philferriere/cocoapi.git
+    cd cocoapi/PythonAPI
+    python setup.py build_ext --inplace
+    ```
+
+6. Add TensorFlow API library directories listed below to the `PYTHONPATH` environment variable:
+    1. C:\code\tensorflow\models
+    2. C:\code\tensorflow\models\research\slim
+    3. C:\code\philferriere\cocoapi\PythonAPI
+
+#### Instructions
+
+##### Training Your Model
+
+1. Gather images with the sports logo you want to detect and annotate the logos using [CVAT](https://github.com/opencv/cvat)
 
     ![Annotate using CVAT example](identifyteamallegiance/samples/annotation.png)
 
@@ -92,6 +144,10 @@ Identify a person's sports team allegiances by detecting sports logos in their i
 `tensorboard --logdir=C:\code\sem-onyalo\hackathon-ideas\identifyteamallegiance\cv\dnn\data\training\models\model`  
 
     ![TensorBoard - Monitoring Training Progress](identifyteamallegiance/samples/tensorboard.png)
+
+##### Running Object Detection
+
+*TODO*
 
 ### Spot Brand Loyalty
 
