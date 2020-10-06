@@ -18,7 +18,7 @@ Keep track of the amount of time you are in your work position using object dete
 
 #### Instructions
 
-1. Run the track work time app on your video: `python main.py 1 trackworktime/samples/in.mp4`.
+1. Run the app on your video: `python main.py 1 trackworktime/samples/in.mp4`.
 
 2. Press `p` to pause the video at the point you want to define the work position.
 
@@ -92,6 +92,17 @@ Identify a person's sports team allegiances by detecting sports logos in their v
     2. C:\code\tensorflow\models\research\slim
     3. C:\code\philferriere\cocoapi\PythonAPI
 
+7. Install bazel and build TensorFlow's graph transform tool (using the [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10) if on Windows):
+
+    ```
+    wget https://github.com/bazelbuild/bazel/releases/download/0.13.0/bazel-0.13.0-installer-linux-x86_64.sh
+    chmod +x bazel-0.13.0-installer-linux-x86_64.sh
+    ./bazel-0.13.0-installer-linux-x86_64.sh --user
+
+    cd /mnt/c/code/tensorflow/tensorflow
+    bazel build tensorflow/tools/graph_transforms:transform_graph
+    ```
+
 #### Instructions
 
 ##### Training Your Model
@@ -125,7 +136,7 @@ Identify a person's sports team allegiances by detecting sports logos in their v
     |   |   |   |   |-- ssd_mobilenet_v1_coco_2017_11_17.pbtxt  
     ```
 
-4. Create a file called [label_map.pbtxt](identifyteamallegiance/cv/dnn/data/training/data/label_map.pbtxt) in the directory [identifyteamallegiance/cv/dnn/data/training/data/](identifyteamallegiance/cv/dnn/data/training/data/) with the following contents:
+4. Create a file called [label_map.pbtxt](identifyteamallegiance/cv/dnn/data/training/data/label_map.pbtxt) in [identifyteamallegiance/cv/dnn/data/training/data/](identifyteamallegiance/cv/dnn/data/training/data/) with the contents below.
 
     ```
     item {  
@@ -135,19 +146,45 @@ Identify a person's sports team allegiances by detecting sports logos in their v
     ```
 
 5. Create the TFRecord training files required to train your model by running the command below. The `--pascal_voc_dir` option is the location of your Pascal VOC annotation extract from CVAT.  
-`python main.py 2 identifyteamallegiance/cv/dnn/data/ --pascal_voc_dir identifyteamallegiance/cv/dnn/data/annotations/pascal-voc-1.1 --bnbbox_xml_idx 2`
+`python main.py 2 identifyteamallegiance/cv/dnn/data/ --pascal_voc_dir identifyteamallegiance/cv/dnn/data/annotations/pascal-voc-1.1 --bnbbox_xml_idx 2 --train`
 
-5. In command prompt `cd` into your local tensorflow repository, e.g. `cd tensorflow/models/research` and run the command to start model training:   
+6. In command prompt `cd` into your local tensorflow repository, e.g. `cd tensorflow/models/research` and run the command to start model training:   
 `python object_detection/model_main.py --pipeline_config_path=C:\path\to\sem-onyalo\hackathon-ideas\identifyteamallegiance\cv\dnn\data\training\models\model\ssd_mobilenet_v1_coco.config --model_dir=C:\path\to\sem-onyalo\hackathon-ideas\identifyteamallegiance\cv\dnn\data\training\models\model\train --num_train_steps=50000 --sample_1_of_n_eval_examples=1 --alsologtostderr`
 
-6. Open a second command prompt window, `cd` into your local tensorflow repository, and run the command below to monitor the training process. Once the monitor process is running you can view the training progress in your browser, default: [http://localhost:6006](http://localhost:6006).   
+7. Open a second command prompt window, `cd` into your local tensorflow repository, and run the command below to monitor the training process. Once the monitor process is running you can view the training progress in your browser, default: [http://localhost:6006](http://localhost:6006).   
 `tensorboard --logdir=C:\code\sem-onyalo\hackathon-ideas\identifyteamallegiance\cv\dnn\data\training\models\model`  
 
     ![TensorBoard - Monitoring Training Progress](identifyteamallegiance/samples/tensorboard.png)
 
+8. Model steps will be saved in [identifyteamallegiance/cv/dnn/data/training/models/model/train/](identifyteamallegiance/cv/dnn/data/training/models/model/train/). Once you are satisfied with your model you can export the desired model step.
+
+    ```
+    cd c:\code\tensorflow\models\research
+
+    python object_detection\export_inference_graph.py --input_type=image_tensor --pipeline_config_path=C:\code\sem-onyalo\hackathon-ideas\identifyteamallegiance\cv\dnn\data\training\models\model\ssd_mobilenet_v1_coco.config --trained_checkpoint_prefix=C:\code\sem-onyalo\hackathon-ideas\identifyteamallegiance\cv\dnn\data\training\models\model\train\model.ckpt-<model-step-number> --output_directory=C:\code\sem-onyalo\hackathon-ideas\identifyteamallegiance\cv\dnn\data\training\models\model\export
+    ```
+
+9. Transform the exported model in your WSL shell. You may need to clear the [model directory](core/models/mobilenet_ssd_v1_sports).
+
+    ```
+    cd /mnt/c/code/tensorflow/tensorflow
+
+    bazel-bin/tensorflow/tools/graph_transforms/transform_graph --in_graph=/mnt/c/code/sem-onyalo/hackathon-ideas/identifyteamallegiance/cv/dnn/data/training/models/model/export/frozen_inference_graph.pb --out_graph=/mnt/c/code/sem-onyalo/hackathon-ideas/core/models/mobilenet_ssd_v1_sports/frozen_inference_graph.pb --inputs=image_tensor --outputs="num_detections,detection_scores,detection_boxes,detection_classes" --transforms="fold_constants(ignore_errors=True)"
+    ```
+
+10. Create the .pbtxt file that OpenCV needs to run your model.
+
+    ```
+    cd c:\code\opencv\opencv
+
+    python samples\dnn\tf_text_graph_ssd.py --input=C:\code\sem-onyalo\hackathon-ideas\core\models\mobilenet_ssd_v1_sports\frozen_inference_graph.pb --output=C:\code\sem-onyalo\hackathon-ideas\core\models\mobilenet_ssd_v1_sports\ssd_mobilenet_v1_sports_2020_10_04.pbtxt --num_classes=1
+    ```
+
+11. Ensure that the config path for `mobilenet_ssd_v1_sports` in [ModelManager.py](core\ModelManager.py) matches the .pbtxt file you created in the above step.
+
 ##### Running Object Detection
 
-*TODO*
+1. Run the app on your video: `python main.py 2 identifyteamallegiance/samples/in.mp4 --score_threshold 0.95`. You may need to override the score threshold depending on the accuracy of your model.
 
 ### Spot Brand Loyalty
 

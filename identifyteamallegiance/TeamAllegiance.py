@@ -14,16 +14,27 @@ import xml.etree.ElementTree as xt
 sys.path.append('../../tensorflow/models/research')
 
 from PIL import Image
-from core import Point, Rectangle
+from core import Constants, Point, Rectangle
+from core import ModelManager, VideoManager
 from collections import namedtuple
 from object_detection.utils import dataset_util
 from object_detection.utils import label_map_util
+
+DETECTION_LABEL = "Ottawa Senators" # TODO: change dnn model label to 'Ottawa Senators Logo'
 
 class TeamAllegiance:
     _appName = "teamAllegiance"
 
     isDebug = False
     isTrain = False
+    videoManager = None
+    classToDetect = 'logo'
+    rectangleThickness = 4
+    detectionColor = (0, 0, 255)
+    labelScale = 0.5
+    labelColor = (0, 0, 0)
+    labelThickness = 1
+    labelBackColor = (255, 255, 255)
     pascalVocSourceDirectory = ""
     trainingDataDirectory = ""
     annotationsDirectory = ""
@@ -36,18 +47,25 @@ class TeamAllegiance:
     tfrecordTrainFilePath = ""
 
     def __init__(self, args):
-        self.isDebug = True # TODO: get from args
+        self.isDebug = args.debug
         self.isTrain = args.train
-        self.workingDirectory = args.sourcePath
-        self.boundingBoxXmlIndex = args.bnbbox_xml_idx
-        self.trainAndTestSplitPct = args.train_test_split
-        self.pascalVocSourceDirectory = args.pascal_voc_dir
-        self.annotationsDirectory = os.path.join(self.pascalVocSourceDirectory, "Annotations")
-        self.imageSetDirectory = os.path.join(self.pascalVocSourceDirectory, "JPEGImages")
-        self.trainingDataDirectory = os.path.join(self.workingDirectory, "training/data")
-        self.labelMapFilePath = os.path.join(self.trainingDataDirectory, "label_map.pbtxt")
-        self.tfrecordTestFilePath = os.path.join(self.trainingDataDirectory, f'test.{args.tfrecord_file_ext}')
-        self.tfrecordTrainFilePath = os.path.join(self.trainingDataDirectory, f'train.{args.tfrecord_file_ext}')
+
+        if self.isTrain:
+            self.workingDirectory = args.sourcePath
+            self.boundingBoxXmlIndex = args.bnbbox_xml_idx
+            self.trainAndTestSplitPct = args.train_test_split
+            self.pascalVocSourceDirectory = args.pascal_voc_dir
+            self.annotationsDirectory = os.path.join(self.pascalVocSourceDirectory, "Annotations")
+            self.imageSetDirectory = os.path.join(self.pascalVocSourceDirectory, "JPEGImages")
+            self.trainingDataDirectory = os.path.join(self.workingDirectory, "training/data")
+            self.labelMapFilePath = os.path.join(self.trainingDataDirectory, "label_map.pbtxt")
+            self.tfrecordTestFilePath = os.path.join(self.trainingDataDirectory, f'test.{args.tfrecord_file_ext}')
+            self.tfrecordTrainFilePath = os.path.join(self.trainingDataDirectory, f'train.{args.tfrecord_file_ext}')
+        else:
+            res = list(map(int, args.res.split(',')))
+            model = ModelManager.ModelManager.models[Constants.MODEL_INDEX_SPORTS]
+            self.videoManager = VideoManager.VideoManager(Constants.WINDOW_NAME, args.sourcePath, args.out, res[0], res[1], model, args.score_threshold)
+            self.videoManager.doFlipFrame = False
 
     def pascal_voc_to_csv(self, input_dir):
         annot_list = []
@@ -67,8 +85,8 @@ class TeamAllegiance:
             csv_headers = ['filename', 'width', 'height', 'class', 'xmin', 'ymin', 'xmax', 'ymax']
             csv_data = pd.DataFrame(annot_list, columns=csv_headers)
 
-        # if self.isDebug:
-        #     csv_data.to_csv(f'{self.workingDirectory}\labels.csv', index=None)
+        if self.isDebug:
+            csv_data.to_csv(f'{self.workingDirectory}\labels.csv', index=None)
         
         return csv_data
 
@@ -89,9 +107,9 @@ class TeamAllegiance:
         train = pd.concat([labels_grouped_list[i] for i in train_indicies])
         test = pd.concat([labels_grouped_list[i] for i in test_indicies])
 
-        # if self.isDebug:
-        #     train.to_csv(f'{self.workingDirectory}\labels-train.csv', index=None)
-        #     test.to_csv(f'{self.workingDirectory}\labels-test.csv', index=None)
+        if self.isDebug:
+            train.to_csv(f'{self.workingDirectory}\labels-train.csv', index=None)
+            test.to_csv(f'{self.workingDirectory}\labels-test.csv', index=None)
 
         return (test, train)
 
@@ -158,6 +176,52 @@ class TeamAllegiance:
         self.create_tfrecord_file(testAndTrainLabels[0], self.labelMapFilePath, self.imageSetDirectory, self.tfrecordTestFilePath)
         self.create_tfrecord_file(testAndTrainLabels[1], self.labelMapFilePath, self.imageSetDirectory, self.tfrecordTrainFilePath)
 
+    def getDetectionHandler(self):
+        handler = lambda cols, rows, pt1X, pt1Y, pt2X, pt2Y, className, score : self.labelDetections(cols, rows, pt1X, pt1Y, pt2X, pt2Y, className, score)
+        return handler
+
+    def labelDetections(self, cols, rows, pt1X, pt1Y, pt2X, pt2Y, className, score):
+        self.videoManager.addRectangle((pt1X, pt1Y), (pt2X, pt2Y), self.detectionColor, self.rectangleThickness)
+        
+        label = DETECTION_LABEL + ": " + str(int(round(score * 100))) + '%'
+        self.videoManager.addLabel(label, pt1X, pt1Y)
+        # TODO: add below logic to VideoManager and make one call to add detection label
+        #       i.e. self.videoManager.addLabel(pt1, pt2, text, scale, thickness)
+        # labelSize, baseLine = self.videoManager.getTextSize(
+        #     DETECTION_LABEL, 
+        #     self.videoManager.getDefaultFont(),
+        #     self.labelScale, 
+        #     self.labelThickness)
+        # maxPt1Y = max(pt1Y, labelSize[1])
+        # self.videoManager.addRectangle(
+        #     (pt1X, maxPt1Y - labelSize[1]),
+        #     (pt1X + labelSize[0], maxPt1Y + baseLine),
+        #     self.labelBackColor,
+        #     -1,
+        #     True)
+        # self.videoManager.addText(
+        #     DETECTION_LABEL, 
+        #     (pt1X, maxPt1Y),
+        #     self.videoManager.getDefaultFont(),
+        #     self.labelScale,
+        #     self.labelColor,
+        #     self.labelThickness)
+
     def run(self):
         if self.isTrain:
             self.createTrainingData(self.annotationsDirectory, self.workingDirectory)
+        else:
+            self.videoManager.readNewFrame()
+            while not self.videoManager.img is None:
+                cmd = self.videoManager.getKeyPress()
+                if cmd == 27: # ESC
+                    break
+
+                self.videoManager.runDetection()
+                self.videoManager.findDetections([self.classToDetect], self.getDetectionHandler())
+
+                self.videoManager.showImage()
+                self.videoManager.writeFrame()
+                self.videoManager.readNewFrame()
+
+            self.videoManager.shutdown()

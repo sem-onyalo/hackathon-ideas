@@ -25,9 +25,10 @@ class ModelManager:
             }
         },
         {
-            'modelPath': 'models/face_detector/yeephycho_tf_face_detector.pb',
+            'modelPath': 'core/models/mobilenet_ssd_v1_sports/frozen_inference_graph.pb',
+            'configPath': 'core/models/mobilenet_ssd_v1_sports/ssd_mobilenet_v1_sports_2020_10_04.pbtxt',
             'classNames': {
-                0: 'background', 1: 'face'
+                0: 'background', 1: 'logo'
             }
         }
     ]

@@ -1,0 +1,4 @@
+MODEL_INDEX_COCO = 0
+MODEL_INDEX_SPORTS = 1
+
+WINDOW_NAME = 'Hackathon Ideas'

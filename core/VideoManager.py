@@ -48,7 +48,7 @@ class VideoManager:
         return cv.waitKey(1)
 
     def getTextSize(self, text, font, scale, thickness):
-        return cv.getTextSize(text, font, scale, thickness)[0]
+        return cv.getTextSize(text, font, scale, thickness)
 
     def setMouseCallback(self, callbackFunction):
         cv.setMouseCallback(self.windowName, callbackFunction)
@@ -141,7 +141,7 @@ class VideoManager:
                 self.xRightPos = int(detection[5] * cols)
                 self.yBottomPos = int(detection[6] * rows)
                 if objectDetectedHandler != None:
-                    objectDetectedHandler(cols, rows, self.xLeftPos, self.yTopPos, self.xRightPos, self.yBottomPos, self.netModel['classNames'][class_id])
+                    objectDetectedHandler(cols, rows, self.xLeftPos, self.yTopPos, self.xRightPos, self.yBottomPos, self.netModel['classNames'][class_id], score)
                 rectangles.append(Rectangle.Rectangle(Point.Point(self.xLeftPos, self.yTopPos), Point.Point(self.xRightPos, self.yBottomPos)))
         return rectangles
 
