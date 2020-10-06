@@ -1,6 +1,7 @@
 import json
 import time
-from core import Point, Rectangle
+from core import Constants, Point, Rectangle
+from core import ModelManager, VideoManager
 
 class WorkTracker:
     _appName = "workTracker"
@@ -21,8 +22,10 @@ class WorkTracker:
     colorNotWorking = (0, 0, 255)
     videoManagerInitTimeoutSec = 5
 
-    def __init__(self, videoManager):
-        self.videoManager = videoManager
+    def __init__(self, args):
+        res = list(map(int, args.res.split(',')))
+        model = ModelManager.ModelManager.models[Constants.MODEL_INDEX_COCO]
+        self.videoManager = VideoManager.VideoManager(Constants.WINDOW_NAME, args.sourcePath, args.out, res[0], res[1], model, args.score_threshold)
         self.videoManager.doFlipFrame = False
         self.videoManager.setMouseCallback(self.mouseCallback)
         self.loadSettings()
