@@ -54,6 +54,12 @@ Keep track of the amount of time you are in your work position using object dete
 
 #### Instructions
 
+#### References
+
+- [PyImageSearch - Tesseract OCR with Python](https://www.pyimagesearch.com/2018/09/17/opencv-ocr-and-text-recognition-with-tesseract/)
+- [Learn OpenCV - Text Detection](https://www.learnopencv.com/deep-learning-based-text-detection-using-opencv-c-python/)
+- [OpenCV - Text Detection](https://github.com/opencv/opencv/blob/master/samples/dnn/text_detection.py)
+
 ### Identify Sports Team Allegiance
 
 Identify a person's sports team allegiances by detecting sports logos in their video feed.
