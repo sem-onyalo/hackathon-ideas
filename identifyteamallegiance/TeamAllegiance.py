@@ -185,27 +185,6 @@ class TeamAllegiance:
         
         label = DETECTION_LABEL + ": " + str(int(round(score * 100))) + '%'
         self.videoManager.addLabel(label, pt1X, pt1Y)
-        # TODO: add below logic to VideoManager and make one call to add detection label
-        #       i.e. self.videoManager.addLabel(pt1, pt2, text, scale, thickness)
-        # labelSize, baseLine = self.videoManager.getTextSize(
-        #     DETECTION_LABEL, 
-        #     self.videoManager.getDefaultFont(),
-        #     self.labelScale, 
-        #     self.labelThickness)
-        # maxPt1Y = max(pt1Y, labelSize[1])
-        # self.videoManager.addRectangle(
-        #     (pt1X, maxPt1Y - labelSize[1]),
-        #     (pt1X + labelSize[0], maxPt1Y + baseLine),
-        #     self.labelBackColor,
-        #     -1,
-        #     True)
-        # self.videoManager.addText(
-        #     DETECTION_LABEL, 
-        #     (pt1X, maxPt1Y),
-        #     self.videoManager.getDefaultFont(),
-        #     self.labelScale,
-        #     self.labelColor,
-        #     self.labelThickness)
 
     def run(self):
         if self.isTrain:
@@ -217,8 +196,8 @@ class TeamAllegiance:
                 if cmd == 27: # ESC
                     break
 
-                self.videoManager.runDetection()
-                self.videoManager.findDetections([self.classToDetect], self.getDetectionHandler())
+                self.videoManager.runObjectDetection()
+                self.videoManager.findObjectsDetected([self.classToDetect], self.getDetectionHandler())
 
                 self.videoManager.showImage()
                 self.videoManager.writeFrame()

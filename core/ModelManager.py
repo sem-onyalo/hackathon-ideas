@@ -30,5 +30,11 @@ class ModelManager:
             'classNames': {
                 0: 'background', 1: 'logo'
             }
+        },
+        {
+            'modelPath': 'core/models/east_text_detection/frozen_east_text_detection.pb'
+        },
+        {
+            'modelPath': 'core/models/meijieru_crnn/crnn.onnx'
         }
     ]

@@ -40,6 +40,20 @@ Keep track of the amount of time you are in your work position using object dete
 
     ![Print time spent working](trackworktime/samples/print-time-spent-working.png)
 
+### Spot Brand Loyalty
+
+*Description here*
+
+#### Dependencies
+
+1. [Python](https://www.python.org/downloads/)
+
+2. [OpevCV](https://opencv.org/releases/)
+
+3. [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
+
+#### Instructions
+
 ### Identify Sports Team Allegiance
 
 Identify a person's sports team allegiances by detecting sports logos in their video feed.
@@ -146,7 +160,7 @@ Identify a person's sports team allegiances by detecting sports logos in their v
     ```
 
 5. Create the TFRecord training files required to train your model by running the command below. The `--pascal_voc_dir` option is the location of your Pascal VOC annotation extract from CVAT.  
-`python main.py 2 identifyteamallegiance/cv/dnn/data/ --pascal_voc_dir identifyteamallegiance/cv/dnn/data/annotations/pascal-voc-1.1 --bnbbox_xml_idx 2 --train`
+`python main.py 3 identifyteamallegiance/cv/dnn/data/ --pascal_voc_dir identifyteamallegiance/cv/dnn/data/annotations/pascal-voc-1.1 --bnbbox_xml_idx 2 --train`
 
 6. In command prompt `cd` into your local tensorflow repository, e.g. `cd tensorflow/models/research` and run the command to start model training:   
 `python object_detection/model_main.py --pipeline_config_path=C:\path\to\sem-onyalo\hackathon-ideas\identifyteamallegiance\cv\dnn\data\training\models\model\ssd_mobilenet_v1_coco.config --model_dir=C:\path\to\sem-onyalo\hackathon-ideas\identifyteamallegiance\cv\dnn\data\training\models\model\train --num_train_steps=50000 --sample_1_of_n_eval_examples=1 --alsologtostderr`
@@ -184,8 +198,4 @@ Identify a person's sports team allegiances by detecting sports logos in their v
 
 ##### Running Object Detection
 
-1. Run the app on your video: `python main.py 2 identifyteamallegiance/samples/in.mp4 --score_threshold 0.95`. You may need to override the score threshold depending on the accuracy of your model.
-
-### Spot Brand Loyalty
-
-`python main.py 3`
+1. Run the app on your video: `python main.py 3 identifyteamallegiance/samples/in.mp4 --score_threshold 0.95`. You may need to override the score threshold depending on the accuracy of your model.

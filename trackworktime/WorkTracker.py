@@ -97,8 +97,8 @@ class WorkTracker:
                 self.videoManager.showImage()
                 continue
 
-            self.videoManager.runDetection()
-            self.videoManager.findBestDetection(self.classToDetect, self.getBestDetectionHandler())
+            self.videoManager.runObjectDetection()
+            self.videoManager.findBestObjectDetected(self.classToDetect, self.getBestDetectionHandler())
 
             self.videoManager.showImage()
             self.videoManager.writeFrame()

@@ -29,66 +29,12 @@ class VideoManager:
         cv.namedWindow(self.windowName, cv.WINDOW_NORMAL)
         self.initVideoIO()
 
-    def isLeftButtonClick(self, event):
-        return event == cv.EVENT_LBUTTONDOWN
-
-    def getImage(self):
-        return self.img
-
-    def getXCoordDetectionDiff(self):
-        return self.xRightPos - self.xLeftPos if self.xRightPos != None and self.xLeftPos != None else None
-
-    def getYCoordDetectionDiff(self):
-        return self.yBottomPos - self.yTopPos if self.yBottomPos != None and self.yTopPos != None else None
-
-    def getDefaultFont(self):
-        return cv.FONT_HERSHEY_SIMPLEX
-
-    def getKeyPress(self):
-        return cv.waitKey(1)
-
-    def getTextSize(self, text, font, scale, thickness):
-        return cv.getTextSize(text, font, scale, thickness)
-
-    def setMouseCallback(self, callbackFunction):
-        cv.setMouseCallback(self.windowName, callbackFunction)
-
-    def showImage(self):
-        cv.imshow(self.windowName, self.img)
-
-    def addText(self, text, pt, font, scale, color, thickness):
-        cv.putText(self.img, text, pt, font, scale, color, thickness, cv.LINE_AA)
-
-    def addRectangle(self, pt1, pt2, color, thickness, isFilled=False):
-        if isFilled:
-            thickness = cv.FILLED
-        cv.rectangle(self.img, pt1, pt2, color, thickness, cv.LINE_AA)
-
-    def addCircle(self, pt1, pt2, color, thickness=5):
-        cv.circle(self.img, (pt1, pt2), thickness, color, -1)
-
-    def addLine(self, pt1, pt2, color, thickness):
-        cv.line(self.img, pt1, pt2, color, thickness)
-
-    def addLabel(self, label, xLeft, yTop, size=0.5):
-        labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, size, 1)
-        yTopText = max(yTop, labelSize[1])
-        cv.rectangle(self.img, (xLeft, yTopText - labelSize[1]), (xLeft + labelSize[0], yTopText + baseLine),
-            (255, 255, 255), cv.FILLED)
-        cv.putText(self.img, label, (xLeft, yTopText), cv.FONT_HERSHEY_SIMPLEX, size, (0, 0, 0))
-
-    def shutdown(self):
-        cv.destroyAllWindows()
-        if not self.videoWriter is None:
-            self.videoWriter.release()
-
-    def decode_fourcc(self, v):
-        v = int(v)
-        return "".join([chr((v >> 8 * i) & 0xFF) for i in range(4)])
-
+    # ----------------------------------------------------------------------------------------------------
+    #     Setup and Teardown Methods
+    # ----------------------------------------------------------------------------------------------------
+    
     def initVideoIO(self):
         # common logic
-        self.cvNet = cv.dnn.readNetFromTensorflow(self.netModel['modelPath'], self.netModel['configPath'])
         self.cap = cv.VideoCapture(self.videoSource)
         # self.cap = cv.VideoCapture(cv.CAP_DSHOW + self.videoSource)
         if self.cap is None or not self.cap.isOpened():
@@ -111,7 +57,68 @@ class VideoManager:
                 self.videoWriter = cv.VideoWriter(self.videoTarget, ex, fs, sz, True)
                 if self.videoWriter is None or not self.videoWriter.isOpened():
                     raise RuntimeError('Error: unable to open video target path')
+                
+        self.cvNet = cv.dnn.readNetFromTensorflow(self.netModel['modelPath'], self.netModel['configPath'])
 
+    def shutdown(self):
+        cv.destroyAllWindows()
+        if not self.videoWriter is None:
+            self.videoWriter.release()
+
+    # ----------------------------------------------------------------------------------------------------
+    #     Getter and Setter Methods
+    # ----------------------------------------------------------------------------------------------------
+    
+    def getImage(self):
+        return self.img
+
+    def getXCoordDetectionDiff(self):
+        return self.xRightPos - self.xLeftPos if self.xRightPos != None and self.xLeftPos != None else None
+
+    def getYCoordDetectionDiff(self):
+        return self.yBottomPos - self.yTopPos if self.yBottomPos != None and self.yTopPos != None else None
+
+    def getDefaultFont(self):
+        return cv.FONT_HERSHEY_SIMPLEX
+
+    def getKeyPress(self):
+        return cv.waitKey(1)
+
+    def getTextSize(self, text, font, scale, thickness):
+        return cv.getTextSize(text, font, scale, thickness)
+
+    def setMouseCallback(self, callbackFunction):
+        cv.setMouseCallback(self.windowName, callbackFunction)
+
+    # ----------------------------------------------------------------------------------------------------
+    #     Frame Modification Methods
+    # ----------------------------------------------------------------------------------------------------
+    
+    def addText(self, text, pt, font, scale, color, thickness):
+        cv.putText(self.img, text, pt, font, scale, color, thickness, cv.LINE_AA)
+
+    def addRectangle(self, pt1, pt2, color, thickness, isFilled=False):
+        if isFilled:
+            thickness = cv.FILLED
+        cv.rectangle(self.img, pt1, pt2, color, thickness, cv.LINE_AA)
+
+    def addCircle(self, pt1, pt2, color, thickness=5):
+        cv.circle(self.img, (pt1, pt2), thickness, color, -1)
+
+    def addLine(self, pt1, pt2, color, thickness):
+        cv.line(self.img, pt1, pt2, color, thickness)
+
+    def addLabel(self, label, xLeft, yTop, size=0.5):
+        labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, size, 1)
+        yTopText = max(yTop, labelSize[1])
+        cv.rectangle(self.img, (xLeft, yTopText - labelSize[1]), (xLeft + labelSize[0], yTopText + baseLine),
+            (255, 255, 255), cv.FILLED)
+        cv.putText(self.img, label, (xLeft, yTopText), cv.FONT_HERSHEY_SIMPLEX, size, (0, 0, 0))
+
+    # ----------------------------------------------------------------------------------------------------
+    #     Frame I/O Methods
+    # ----------------------------------------------------------------------------------------------------
+    
     def readNewFrame(self):
         _, img = self.cap.read()
         self.img = cv.flip(img, 1) if self.doFlipFrame else img
@@ -120,11 +127,35 @@ class VideoManager:
         if not self.videoWriter is None:
             self.videoWriter.write(self.img)
 
-    def runDetection(self):
+    def showImage(self):
+        cv.imshow(self.windowName, self.img)
+
+    # ----------------------------------------------------------------------------------------------------
+    #     Misc Helper Methods
+    # ----------------------------------------------------------------------------------------------------
+    
+    def isLeftButtonClick(self, event):
+        return event == cv.EVENT_LBUTTONDOWN
+
+    def decode_fourcc(self, v):
+        v = int(v)
+        return "".join([chr((v >> 8 * i) & 0xFF) for i in range(4)])
+
+    # ####################################################################################################
+    # ----------------------------------------------------------------------------------------------------
+    #     Model Inference Methods
+    # ----------------------------------------------------------------------------------------------------
+    # ####################################################################################################
+    
+    # ----------------------------------------------------------------------------------------------------
+    #     Object Detection
+    # ----------------------------------------------------------------------------------------------------
+    
+    def runObjectDetection(self):
         self.cvNet.setInput(cv.dnn.blobFromImage(self.img, 1.0/127.5, (300, 300), (127.5, 127.5, 127.5), swapRB=True, crop=False))
         self.detections = self.cvNet.forward()
 
-    def findDetections(self, classNames, objectDetectedHandler=None):
+    def findObjectsDetected(self, classNames, objectDetectedHandler=None):
         rectangles = []
         self.xLeftPos = None
         self.xRightPos = None
@@ -145,7 +176,7 @@ class VideoManager:
                 rectangles.append(Rectangle.Rectangle(Point.Point(self.xLeftPos, self.yTopPos), Point.Point(self.xRightPos, self.yBottomPos)))
         return rectangles
 
-    def findBestDetection(self, className, findBestDetectionHandler=None):
+    def findBestObjectDetected(self, className, findBestDetectionHandler=None):
         currentScore = 0
         bestDetection = None
         rows = self.img.shape[0]
@@ -168,7 +199,7 @@ class VideoManager:
 
         return bestDetection
 
-    def findClosestDetection(self, className, objectDetectedHandler=None):
+    def findClosestObjectDetected(self, className, objectDetectedHandler=None):
         currentScore = 0
         closestDetection = None
         rows = self.img.shape[0]
@@ -190,3 +221,8 @@ class VideoManager:
             if objectDetectedHandler != None:
                 objectDetectedHandler(cols, rows, closestDetection.pt1.x, closestDetection.pt1.y, closestDetection.pt2.x, closestDetection.pt2.y, className, currentScore)
             return closestDetection
+
+    # ----------------------------------------------------------------------------------------------------
+    #     OCR
+    # ----------------------------------------------------------------------------------------------------
+    
