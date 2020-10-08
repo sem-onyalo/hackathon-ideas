@@ -1,12 +1,12 @@
 import cv2 as cv
 import time
-from . import Point, Rectangle, Utils
+from . import Constants, Point, Rectangle, Utils
 
 class VideoManager:
-    imgMargin = 60
     img = None
-    netModel = None
+    imgMargin = 60
     windowName = ""
+    netModel = None
     detections = None
     scoreThreshold = None
     xLeftPos = None
@@ -15,19 +15,21 @@ class VideoManager:
     yBottomPos = None
     videoSource = None
     videoTarget = None
-    doFlipFrame = True
+    doFlipFrame = False
     videoWriter = None
 
-    def __init__(self, windowName, videoSource, videoTarget, frameWidth, frameHeight, netModel, scoreThreshold):
-        self.netModel = netModel
+    def __init__(self, windowName, modelObject, args):
         self.windowName = windowName
-        self.frameWidth = frameWidth
-        self.frameHeight = frameHeight
-        self.videoSource = videoSource
-        self.videoTarget = videoTarget
-        self.scoreThreshold = scoreThreshold
+        self.videoSource = args.sourcePath
+        self.videoTarget = args.out
+        self.scoreThreshold = args.score_threshold
+        self.frameWidth, self.frameHeight = self.parseResolution(args.res)
+        self.preprocWidth, self.preprocHeight = self.parseResolution(args.res_preproc)
+
         cv.namedWindow(self.windowName, cv.WINDOW_NORMAL)
+
         self.initVideoIO()
+        self.initDnnModel(modelObject)
 
     # ----------------------------------------------------------------------------------------------------
     #     Setup and Teardown Methods
@@ -58,7 +60,15 @@ class VideoManager:
                 if self.videoWriter is None or not self.videoWriter.isOpened():
                     raise RuntimeError('Error: unable to open video target path')
                 
-        self.cvNet = cv.dnn.readNetFromTensorflow(self.netModel['modelPath'], self.netModel['configPath'])
+    def initDnnModel(self, modelObject):
+        if modelObject['type'] == Constants.OBJECT_DETECTION:
+            self.netModel = modelObject['obj']
+            self.cvNet = cv.dnn.readNetFromTensorflow(self.netModel['modelPath'], self.netModel['configPath'])
+        elif modelObject['type'] == Constants.OCR:
+            self.netModel = modelObject['obj']
+            self.cvNet = cv.dnn.readNet(self.netModel['modelPath'])
+        else:
+            raise RuntimeError('Error: unknown model object type:', modelObject['type'])
 
     def shutdown(self):
         cv.destroyAllWindows()
@@ -140,6 +150,12 @@ class VideoManager:
     def decode_fourcc(self, v):
         v = int(v)
         return "".join([chr((v >> 8 * i) & 0xFF) for i in range(4)])
+
+    def parseResolution(self, resolution):
+        resSplit = list(map(int, resolution.split(',')))
+        width = resSplit[0]
+        height = resSplit[1]
+        return width, height
 
     # ####################################################################################################
     # ----------------------------------------------------------------------------------------------------
@@ -226,3 +242,6 @@ class VideoManager:
     #     OCR
     # ----------------------------------------------------------------------------------------------------
     
+    def runOcrDetection(self):
+        self.cvNet.setInput(cv.dnn.blobFromImage(self.img, 1.0, (self.preprocWidth, self.preprocHeight), (123.68, 116.78, 103.94), True, False))
+        self.detections = self.cvNet.forward(self.outNames)

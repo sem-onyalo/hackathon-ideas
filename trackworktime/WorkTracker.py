@@ -23,10 +23,12 @@ class WorkTracker:
     videoManagerInitTimeoutSec = 5
 
     def __init__(self, args):
-        res = list(map(int, args.res.split(',')))
-        model = ModelManager.ModelManager.models[Constants.MODEL_INDEX_COCO]
-        self.videoManager = VideoManager.VideoManager(Constants.WINDOW_NAME, args.sourcePath, args.out, res[0], res[1], model, args.score_threshold)
-        self.videoManager.doFlipFrame = False
+        modelObject = {
+            'type': Constants.OBJECT_DETECTION,
+            'obj': ModelManager.ModelManager.models[Constants.MODEL_INDEX_COCO]
+        }
+
+        self.videoManager = VideoManager.VideoManager(Constants.WINDOW_NAME, modelObject, args)
         self.videoManager.setMouseCallback(self.mouseCallback)
         self.loadSettings()
 

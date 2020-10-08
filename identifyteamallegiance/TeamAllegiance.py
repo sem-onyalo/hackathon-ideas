@@ -62,10 +62,12 @@ class TeamAllegiance:
             self.tfrecordTestFilePath = os.path.join(self.trainingDataDirectory, f'test.{args.tfrecord_file_ext}')
             self.tfrecordTrainFilePath = os.path.join(self.trainingDataDirectory, f'train.{args.tfrecord_file_ext}')
         else:
-            res = list(map(int, args.res.split(',')))
-            model = ModelManager.ModelManager.models[Constants.MODEL_INDEX_SPORTS]
-            self.videoManager = VideoManager.VideoManager(Constants.WINDOW_NAME, args.sourcePath, args.out, res[0], res[1], model, args.score_threshold)
-            self.videoManager.doFlipFrame = False
+            modelObject = {
+                'type': Constants.OBJECT_DETECTION,
+                'obj': ModelManager.ModelManager.models[Constants.MODEL_INDEX_SPORTS]
+            }
+
+            self.videoManager = VideoManager.VideoManager(Constants.WINDOW_NAME, modelObject, args)
 
     def pascal_voc_to_csv(self, input_dir):
         annot_list = []
