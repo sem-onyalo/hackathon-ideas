@@ -108,4 +108,4 @@ ENV/
 # CV model training
 **/cv/*
 !**/cv/dnn.zip 
-**/samples/out.*
+**/samples/out*

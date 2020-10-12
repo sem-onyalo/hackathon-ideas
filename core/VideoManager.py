@@ -1,3 +1,4 @@
+import re
 import os
 import cv2 as cv
 import time
@@ -6,7 +7,7 @@ import numpy as np
 import pytesseract
 
 from PIL import Image
-from . import Constants, Point, Rectangle, Utils
+from . import Constants, Point, Rectangle, Line, Utils
 
 class VideoManager:
     img = None
@@ -24,6 +25,10 @@ class VideoManager:
     doFlipFrame = False
     videoWriter = None
     detectorFeaturesOut = []
+    ocrConfig = ""
+    ocrPaddingPct = 0.0
+    ocrDoPreprocBlur = False
+    ocrDoPreprocThresh = False
 
     def __init__(self, windowName, modelObject, args):
         self.windowName = windowName
@@ -31,9 +36,13 @@ class VideoManager:
         self.targetPath = args.out
         self.scoreThreshold = args.score_threshold
         self.frameWidth, self.frameHeight = self.parseResolution(args.res)
-        self.preprocWidth, self.preprocHeight = self.parseResolution(args.res_preproc)
+        self.preprocWidth, self.preprocHeight = self.parseResolution(args.ocr_preproc_res)
         self.detectorFeaturesOut.append("feature_fusion/Conv_7/Sigmoid")
         self.detectorFeaturesOut.append("feature_fusion/concat_3")
+        self.ocrConfig = f'-l {args.ocr_lang} --oem {args.ocr_oem} --psm {args.ocr_psm}'
+        self.ocrPaddingPct = args.ocr_padding
+        self.ocrDoPreprocBlur = args.ocr_preproc_blur
+        self.ocrDoPreprocThresh = args.ocr_preproc_thresh
 
         cv.namedWindow(self.windowName, cv.WINDOW_NORMAL)
 
@@ -190,22 +199,55 @@ class VideoManager:
         result = cv.warpPerspective(frame, rotationMatrix, outputSize)
         return result
 
-    def decodeText(self, scores):
-        text = ""
-        alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
-        for i in range(scores.shape[0]):
-            c = np.argmax(scores[i][0])
-            if c != 0:
-                text += alphabet[c - 1]
-            else:
-                text += '-'
+    def cropFrame(self, frame, vertices, paddingPct):
+        # scale the bounding box coordinates based on the respective ratios
+        rW = frame.shape[1] / float(self.preprocWidth)
+        rH = frame.shape[0] / float(self.preprocHeight)
 
-        # adjacent same letters as well as background text must be removed to get the final output
-        char_list = []
-        for i in range(len(text)):
-            if text[i] != '-' and (not (i > 0 and text[i] == text[i - 1])):
-                char_list.append(text[i])
-        return ''.join(char_list)
+        for j in range(4):
+            vertices[j][0] *= rW
+            vertices[j][1] *= rH
+
+        # pad bounding box
+        d0x = int(vertices[0][0] * paddingPct)
+        d0y = int(vertices[0][1] * paddingPct)
+        d1x = int(vertices[1][0] * paddingPct)
+        d1y = int(vertices[1][1] * paddingPct)
+        d2x = int(vertices[2][0] * paddingPct)
+        d2y = int(vertices[2][1] * paddingPct)
+        d3x = int(vertices[3][0] * paddingPct)
+        d3y = int(vertices[3][1] * paddingPct)
+        
+        p0x = vertices[0][0] - d0x
+        p0y = vertices[0][1] + d0y
+        p1x = vertices[1][0] - d1x
+        p1y = vertices[1][1] - d1y
+        p2x = vertices[2][0] + d2x
+        p2y = vertices[2][1] - d2y
+        p3x = vertices[3][0] + d3x
+        p3y = vertices[3][1] + d3y
+        
+        vertices[0][0] = max(0, p0x)
+        vertices[0][1] = min(frame.shape[0], p0y)
+        vertices[1][0] = max(0, p1x)
+        vertices[1][1] = max(0, p1y)
+        vertices[2][0] = min(frame.shape[1], p2x)
+        vertices[2][1] = max(0, p2y)
+        vertices[3][0] = min(frame.shape[1], p3x)
+        vertices[3][1] = min(frame.shape[0], p3y)
+        
+        # transform and crop frame
+        vertices = np.asarray(vertices)
+        outputSize = (100, 32)
+        targetVertices = np.array([
+            [0, outputSize[1] - 1],
+            [0, 0],
+            [outputSize[0] - 1, 0],
+            [outputSize[0] - 1, outputSize[1] - 1]], dtype="float32")
+
+        rotationMatrix = cv.getPerspectiveTransform(vertices, targetVertices)
+        result = cv.warpPerspective(frame, rotationMatrix, outputSize)
+        return result
 
     def decodeBoundingBoxes(self, scores, geometry, scoreThresh):
         detections = []
@@ -352,14 +394,14 @@ class VideoManager:
         self.detections = self.cvNet.forward(self.detectorFeaturesOut)
 
     def findTextDetected(self):
-        textDetected = []
+        detections = []
 
         scores = self.detections[0]
         geometry = self.detections[1]
         [boxes, confidences] = self.decodeBoundingBoxes(scores, geometry, self.scoreThreshold)
 
-        rW = self.img.shape[1] / float(self.preprocWidth)
-        rH = self.img.shape[0] / float(self.preprocHeight)
+        # rW = self.img.shape[1] / float(self.preprocWidth)
+        # rH = self.img.shape[0] / float(self.preprocHeight)
 
         # Apply NMS
         indices = cv.dnn.NMSBoxesRotated(boxes, confidences, self.scoreThreshold, self.scoreThreshold)
@@ -367,32 +409,43 @@ class VideoManager:
             # get 4 corners of the rotated rect
             vertices = cv.boxPoints(boxes[i[0]])
 
-            # scale the bounding box coordinates based on the respective ratios
-            for j in range(4):
-                vertices[j][0] *= rW
-                vertices[j][1] *= rH
+            # # scale the bounding box coordinates based on the respective ratios
+            # for j in range(4):
+            #     vertices[j][0] *= rW
+            #     vertices[j][1] *= rH
+                
+            # # crop image around detected text
+            # cropped = self.fourPointsTransform(self.img, vertices)
                 
             # crop image around detected text
-            cropped = self.fourPointsTransform(self.img, vertices)
+            cropped = self.cropFrame(self.img, vertices, self.ocrPaddingPct)
 
             # preprocess image before OCR
             preprocessed = cv.cvtColor(cropped, cv.COLOR_BGR2GRAY)
-            preprocessed = cv.threshold(preprocessed, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
-            preprocessed = cv.medianBlur(preprocessed, 3)
+
+            if self.ocrDoPreprocBlur:
+                preprocessed = cv.threshold(preprocessed, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
+
+            if self.ocrDoPreprocThresh:
+                preprocessed = cv.medianBlur(preprocessed, 3)
+            
+            # if self.isDebug:
             # cv.imwrite('spotbrandloyalty/samples/preprocessing.jpg', preprocessed)
 
             # run OCR
-            text = pytesseract.image_to_string(preprocessed, config='-l eng --oem 1 --psm 6')
+            text = pytesseract.image_to_string(preprocessed, config=self.ocrConfig)
+            
+            # only include alphanumeric characters
+            text = re.sub(r'\W+', '', text)
 
-            # TODO: clean text before appending
-            textDetected.append(text)
+            detection = {
+                'text': text,
+                'lines': []
+            }
 
             for j in range(4):
-                p1 = (vertices[j][0], vertices[j][1])
-                p2 = (vertices[(j + 1) % 4][0], vertices[(j + 1) % 4][1])
-                cv.line(self.img, p1, p2, (0, 255, 0), 5)
+                detection['lines'].append(Rectangle.Rectangle(Point.Point(int(vertices[j][0]), int(vertices[j][1])), Point.Point(int(vertices[(j + 1) % 4][0]), int(vertices[(j + 1) % 4][1]))))
 
-            cv.putText(self.img, text, (int(vertices[1][0]), int(vertices[1][1])), cv.FONT_HERSHEY_SIMPLEX,
-                    0.5, (255, 0, 0))
+            detections.append(detection)
             
-        return textDetected
+        return detections
