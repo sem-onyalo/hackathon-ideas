@@ -2,5 +2,10 @@
     "workTracker": {
         "workPosition": "10,10,770,710",
         "workPositionThreshold": 50
+    },
+    "brandSpotter": {
+        "brands": [
+            "ZOO YORK"
+        ]
     }
 }

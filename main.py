@@ -28,6 +28,7 @@ if __name__ == '__main__':
     parser.add_argument("--ocr_oem", type=int, default=1, help="OCR engine mode")
     parser.add_argument("--ocr_psm", type=int, default=7, help="OCR page segmentation mode")
     parser.add_argument("--ocr_padding", type=float, default=0.0, help="Amount of padding as a percent to add to text recognition bounding box")
+    parser.add_argument("--fzm_threshold", type=float, default=0.8, help="Only show fuzzy string matches equal to or above this threshold")
     args = parser.parse_args()
 
     if args.optionId == 1:

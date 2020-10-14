@@ -52,7 +52,15 @@ Keep track of the amount of time you are in your work position using object dete
 
 3. [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
 
+4. [FuzzyWuzzy](https://github.com/seatgeek/fuzzywuzzy)
+
+    ```
+    pip install fuzzywuzzy
+    ```
+
 #### Instructions
+
+`python main.py 2 spotbrandloyalty/samples/in.mp4 --out spotbrandloyalty/samples/out-8-blur-thresh.mp4 --ocr_psm 8 --ocr_preproc_blur --ocr_preproc_thresh --ocr_padding 0.05`
 
 #### References
 

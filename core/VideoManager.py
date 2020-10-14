@@ -144,6 +144,35 @@ class VideoManager:
             (255, 255, 255), cv.FILLED)
         cv.putText(self.img, label, (xLeft, yTopText), cv.FONT_HERSHEY_SIMPLEX, size, (0, 0, 0))
 
+    def addTextWithBackground(self, text, scale, color, thickness, backgroundColor, position, padding=10, margin=10):
+        text0Size, _ = cv.getTextSize(text[0], cv.FONT_HERSHEY_SIMPLEX, scale[0], thickness)
+        text1Size, _ = cv.getTextSize(text[1], cv.FONT_HERSHEY_SIMPLEX, scale[1], thickness)
+        # TODO: add the logic the rest of the text positions
+        if position == 'top-right':
+            # calculate position of text 0
+            textPtX = self.img.shape[1] - text0Size[0] - padding
+            textPtY = text0Size[1] + padding
+            backPt1X = self.img.shape[1] - text0Size[0] - (2 * padding)
+            backPt1Y = 0
+            backPt2X = self.img.shape[1]
+            backPt2Y = text0Size[1] + (2 * padding)
+
+            # add text 0
+            cv.rectangle(self.img, (backPt1X, backPt1Y), (backPt2X, backPt2Y), backgroundColor, cv.FILLED)
+            cv.putText(self.img, text[0], (textPtX, textPtY), cv.FONT_HERSHEY_SIMPLEX, scale[0], color, thickness, cv.LINE_AA)
+            
+            # calculate position of text 1
+            textPtX = self.img.shape[1] - text1Size[0] - padding
+            textPtY = backPt2Y + text1Size[1] + padding + margin
+            backPt1X = self.img.shape[1] - text1Size[0] - (2 * padding)
+            backPt1Y = backPt2Y + margin
+            backPt2X = self.img.shape[1]
+            backPt2Y = backPt2Y + text1Size[1] + (2 * padding) + margin
+            
+            # add text 1
+            cv.rectangle(self.img, (backPt1X, backPt1Y), (backPt2X, backPt2Y), backgroundColor, cv.FILLED)
+            cv.putText(self.img, text[1], (textPtX, textPtY), cv.FONT_HERSHEY_SIMPLEX, scale[1], color, thickness, cv.LINE_AA)
+
     # ----------------------------------------------------------------------------------------------------
     #     Frame I/O Methods
     # ----------------------------------------------------------------------------------------------------
@@ -185,19 +214,6 @@ class VideoManager:
         width = resSplit[0]
         height = resSplit[1]
         return width, height
-
-    def fourPointsTransform(self, frame, vertices):
-        vertices = np.asarray(vertices)
-        outputSize = (100, 32)
-        targetVertices = np.array([
-            [0, outputSize[1] - 1],
-            [0, 0],
-            [outputSize[0] - 1, 0],
-            [outputSize[0] - 1, outputSize[1] - 1]], dtype="float32")
-
-        rotationMatrix = cv.getPerspectiveTransform(vertices, targetVertices)
-        result = cv.warpPerspective(frame, rotationMatrix, outputSize)
-        return result
 
     def cropFrame(self, frame, vertices, paddingPct):
         # scale the bounding box coordinates based on the respective ratios
@@ -399,24 +415,14 @@ class VideoManager:
         scores = self.detections[0]
         geometry = self.detections[1]
         [boxes, confidences] = self.decodeBoundingBoxes(scores, geometry, self.scoreThreshold)
-
-        # rW = self.img.shape[1] / float(self.preprocWidth)
-        # rH = self.img.shape[0] / float(self.preprocHeight)
-
+        
         # Apply NMS
         indices = cv.dnn.NMSBoxesRotated(boxes, confidences, self.scoreThreshold, self.scoreThreshold)
+        
         for i in indices:
             # get 4 corners of the rotated rect
             vertices = cv.boxPoints(boxes[i[0]])
 
-            # # scale the bounding box coordinates based on the respective ratios
-            # for j in range(4):
-            #     vertices[j][0] *= rW
-            #     vertices[j][1] *= rH
-                
-            # # crop image around detected text
-            # cropped = self.fourPointsTransform(self.img, vertices)
-                
             # crop image around detected text
             cropped = self.cropFrame(self.img, vertices, self.ocrPaddingPct)
 
