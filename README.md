@@ -42,7 +42,7 @@ Keep track of the amount of time you are in your work position using object dete
 
 ### Spot Brand Loyalty
 
-*Description here*
+Identify a brand's text logo in a video for the purpose of identifying brand loyalty.
 
 #### Dependencies
 
@@ -60,7 +60,9 @@ Keep track of the amount of time you are in your work position using object dete
 
 #### Instructions
 
-`python main.py 2 spotbrandloyalty/samples/in.mp4 --out spotbrandloyalty/samples/out-8-blur-thresh.mp4 --ocr_psm 8 --ocr_preproc_blur --ocr_preproc_thresh --ocr_padding 0.05`
+1. In the list `brandSpotter.brands` in [app.settings.json](app.settings.json) insert a list of brands you want to identify.
+
+2. Run the brand spotter app on your video: `python main.py 2 spotbrandloyalty/samples/in.mp4 --out spotbrandloyalty/samples/out-8-blur-thresh.mp4 --ocr_psm 8 --ocr_preproc_blur --ocr_preproc_thresh --ocr_padding 0.05`
 
 #### References
 
