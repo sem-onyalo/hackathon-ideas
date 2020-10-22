@@ -70,7 +70,7 @@ Identify a brand's text logo in a video for the purpose of identifying brand loy
 - [Learn OpenCV - Text Detection](https://www.learnopencv.com/deep-learning-based-text-detection-using-opencv-c-python/)
 - [OpenCV - Text Detection](https://github.com/opencv/opencv/blob/master/samples/dnn/text_detection.py)
 
-### Identify Sports Team Allegiance
+### Identify Team Allegiance
 
 Identify a person's sports team allegiances by detecting sports logos in their video feed.
 
@@ -215,3 +215,7 @@ Identify a person's sports team allegiances by detecting sports logos in their v
 ##### Running Object Detection
 
 1. Run the app on your video: `python main.py 3 identifyteamallegiance/samples/in.mp4 --score_threshold 0.95`. You may need to override the score threshold depending on the accuracy of your model.
+
+#### References
+
+- [How to train your own Object Detector with TensorFlow’s Object Detector API](https://towardsdatascience.com/how-to-train-your-own-object-detector-with-tensorflows-object-detector-api-bec72ecfe1d9)
