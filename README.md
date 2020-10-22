@@ -40,6 +40,11 @@ Keep track of the amount of time you are in your work position using object dete
 
     ![Print time spent working](trackworktime/samples/print-time-spent-working.png)
 
+#### References
+
+- [OpenCV Deep Neural Networks](https://docs.opencv.org/master/d2/d58/tutorial_table_of_content_dnn.html)
+- [TensorFlow Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection)
+
 ### Spot Brand Loyalty
 
 Identify a brand's text logo in a video for the purpose of identifying brand loyalty.
