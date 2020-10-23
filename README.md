@@ -2,7 +2,7 @@
 
 ## Demo
 
-TODO: Put link to demo video here
+[![3 Computer Vision Hackathon Ideas in 90 Seconds!!](http://img.youtube.com/vi/yPdR52WJLjM/0.jpg)](http://www.youtube.com/watch?v=yPdR52WJLjM "3 Computer Vision Hackathon Ideas in 90 Seconds!!")
 
 ## Ideas
 
